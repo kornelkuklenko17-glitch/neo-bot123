@@ -1,0 +1,20 @@
+{
+  "name": "neo-telegram-bot",
+  "version": "2.0.0",
+  "description": "Telegram reminder bot for NEO Life app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-cron": "^3.0.3"
+  },
+  "keywords": ["telegram", "reminder", "bot", "neo-life"],
+  "author": "NEO Life",
+  "license": "MIT"
+}
