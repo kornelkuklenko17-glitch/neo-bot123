@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>NEO LIFE</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #070b14; color: #fff; overflow-x: hidden; min-height: 100vh; }
+
+  canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  #app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+
+  /* HEADER */
+  .header { position: sticky; top: 0; z-index: 50; background: rgba(7,11,20,0.92); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,255,100,0.12); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 20px; font-weight: 900; background: linear-gradient(135deg,#00ff64,#00ffff,#7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 3px; }
+  .bot-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  .bot-online { background: #00ff64; box-shadow: 0 0 8px #00ff64; animation: pulse 2s infinite; }
+  .bot-offline { background: #ff4444; }
+  .bot-status { font-size: 11px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 4px; }
+
+  /* CARDS */
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(0,255,100,0.12); border-radius: 20px; padding: 16px; margin: 12px 16px; backdrop-filter: blur(10px); }
+  .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; background: linear-gradient(135deg,#fff,#00ff64); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .card h3 { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 10px; }
+
+  /* INPUTS */
+  input[type="text"], input[type="number"], select {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(0,255,100,0.2); border-radius: 12px;
+    color: #fff; padding: 10px 14px; font-size: 14px; outline: none; -webkit-appearance: none; appearance: none;
+    transition: border-color .2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: rgba(0,255,100,0.6); }
+  input[type="time"] {
+    width: 100%; background: rgba(0,255,100,0.08); border: 1px solid rgba(0,255,100,0.35); border-radius: 12px;
+    color: #00ff64; padding: 12px 14px; font-size: 22px; font-weight: 700; outline: none; letter-spacing: 3px;
+    text-align: center; -webkit-appearance: none; appearance: none;
+  }
+  select option { background: #0d1628; color: #fff; }
+
+  /* BUTTONS */
+  .btn { padding: 12px 20px; border: none; border-radius: 50px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all .2s; }
+  .btn-green { background: linear-gradient(135deg,#00ff64,#00cc50); color: #070b14; }
+  .btn-green:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(0,255,100,0.4); }
+  .btn-green:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid rgba(0,255,100,0.2); color: rgba(255,255,255,0.7); }
+  .btn-danger { background: rgba(255,0,0,0.12); border: none; color: #ff4444; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .btn-icon { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .btn-icon.active { background: rgba(0,255,100,0.15); border-color: rgba(0,255,100,0.4); color: #00ff64; }
+  .btn-wide { width: 100%; }
+
+  /* NAV */
+  .nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: rgba(7,11,20,0.97); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,255,100,0.15); padding: 8px 4px 12px; display: flex; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; font-size: 10px; font-weight: 600; transition: all .2s; border-radius: 12px; }
+  .nav-btn.active { color: #00ff64; }
+  .nav-btn .icon { font-size: 20px; transition: transform .2s; }
+  .nav-btn.active .icon { transform: scale(1.2); filter: drop-shadow(0 0 8px #00ff64); }
+
+  /* CALENDAR */
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .cal-day-label { text-align: center; font-size: 11px; color: rgba(0,255,100,0.7); padding: 4px 0; font-weight: 600; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 50%; border: 1px solid transparent;
+    background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7);
+    font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    position: relative; transition: all .2s; -webkit-appearance: none;
+  }
+  .cal-day.today { border: 2px solid #00ff64; color: #00ff64; font-weight: 700; }
+  .cal-day.selected { border: 2px solid #00ffff; background: rgba(0,255,255,0.15); }
+  .cal-day.has-task { background: rgba(0,255,100,0.12); color: #00ff64; }
+  .cal-dot { position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: #00ff64; }
+  .cal-bell { position: absolute; top: 0; right: 0; font-size: 8px; }
+
+  /* TASK ROW */
+  .task-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,255,100,0.08); }
+  .task-row:last-child { border-bottom: none; }
+  .task-check { width: 20px; height: 20px; accent-color: #00ff64; flex-shrink: 0; cursor: pointer; }
+  .task-text { flex: 1; font-size: 14px; }
+  .task-text.done { color: rgba(255,255,255,0.3); text-decoration: line-through; }
+  .task-reminder-badge { font-size: 11px; color: #00ff64; margin-top: 2px; }
+
+  /* REMINDER PANEL */
+  .reminder-panel { margin-top: 10px; background: rgba(0,255,100,0.06); border: 1px solid rgba(0,255,100,0.2); border-radius: 14px; padding: 12px; }
+  .reminder-panel-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+
+  /* TOGGLE BUTTON */
+  .toggle-btn { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 50px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; width: 100%; }
+  .toggle-btn.off { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.4); }
+  .toggle-btn.on { background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.4); color: #00ff64; }
+
+  /* TOAST */
+  .toast { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 300; border-radius: 16px; padding: 12px 20px; font-size: 13px; color: #fff; backdrop-filter: blur(20px); max-width: 320px; text-align: center; pointer-events: none; animation: fadeIn .3s; }
+  .toast.ok { background: rgba(0,40,15,0.97); border: 1px solid #00ff64; box-shadow: 0 4px 30px rgba(0,255,100,0.3); }
+  .toast.err { background: rgba(70,20,0,0.97); border: 1px solid #ff8800; box-shadow: 0 4px 30px rgba(255,136,0,0.3); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  @keyframes fadeIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes slideIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .animate-in { animation: slideIn .3s ease-out; }
+
+  /* Habit circles */
+  .habit-circles { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
+  .h-circle { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+  .h-circle.done { background: var(--hc, #00ff64); border-color: var(--hc, #00ff64); color: #070b14; font-size: 12px; }
+
+  /* Finance */
+  .bar-wrap { display: flex; gap: 6px; align-items: flex-end; height: 100px; padding: 4px 0; }
+  .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; min-height: 4px; transition: height .4s; }
+  .bar.inc { background: linear-gradient(180deg,#00ff64,#00cc50); }
+  .bar.exp { background: linear-gradient(180deg,#ff4444,#cc2222); }
+  .bar-label { font-size: 9px; color: rgba(255,255,255,0.4); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: slideIn .3s ease-out; }
+
+  .row-flex { display: flex; gap: 8px; }
+  .row-flex input { flex: 1; }
+
+  .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+  .green { color: #00ff64; }
+  .red { color: #ff4444; }
+
+  /* Weather */
+  .city-btn { padding: 8px 14px; border-radius: 50px; border: 1px solid rgba(0,255,100,0.2); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); cursor: pointer; font-size: 12px; white-space: nowrap; transition: all .2s; }
+  .city-btn.active { background: rgba(0,255,100,0.15); border-color: rgba(0,255,100,0.5); color: #00ff64; }
+  .forecast-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; }
+  .f-card { min-width: 64px; text-align: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(0,255,100,0.1); border-radius: 12px; padding: 8px 4px; flex-shrink: 0; }
+  .f-day { font-size: 10px; color: rgba(255,255,255,0.5); }
+  .f-icon { font-size: 20px; margin: 4px 0; }
+  .f-temp { font-size: 14px; font-weight: 700; color: #fff; }
+  .f-prec { font-size: 10px; color: #00ccff; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div id="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">NEO LIFE</div>
+    <div class="bot-status">
+      <span class="bot-dot bot-offline" id="botDot"></span>
+      <span id="botLabel">Проверка бота...</span>
+    </div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.4);text-align:right;" id="clock"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-content active" id="tab-home">
+    <div class="card">
+      <h2>🌌 Добро пожаловать</h2>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">
+        NEO LIFE — твой космический трекер жизни.<br>Задачи · Привычки · Финансы · Погода · Календарь
+      </div>
+    </div>
+    <div class="card" id="homeStatsCard">
+      <h2>📊 Сегодня</h2>
+      <div id="homeStats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+    </div>
+    <div class="card">
+      <h2>🤖 Telegram-бот</h2>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:12px;">
+        Бот <b style="color:#00ff64;">@Kornel99_bot</b> присылает напоминания о задачах прямо в Telegram.
+      </div>
+      <button class="btn btn-ghost btn-wide" onclick="testBot()">🚀 Тест-сообщение</button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-tasks">
+    <div class="card">
+      <h2>✅ Задачи</h2>
+      <input type="text" id="taskInput" placeholder="Название задачи..." style="margin-bottom:8px;" />
+
+      <!-- Reminder toggle -->
+      <button class="toggle-btn off" id="taskReminderToggle" onclick="toggleTaskReminder()" style="margin-bottom:8px;">
+        <span>📲</span><span>Telegram напоминание</span>
+        <span id="taskToggleDot" style="width:7px;height:7px;border-radius:50%;background:#888;margin-left:auto;"></span>
+      </button>
+
+      <!-- Reminder time panel -->
+      <div id="taskReminderPanel" style="display:none;background:rgba(0,255,100,0.06);border:1px solid rgba(0,255,100,0.2);border-radius:16px;padding:14px;margin-bottom:8px;">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">📅 Дата напоминания:</div>
+        <input type="date" id="taskReminderDate" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(0,255,100,0.2);border-radius:12px;color:#fff;padding:10px 14px;font-size:14px;outline:none;margin-bottom:8px;" />
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">⏰ Время напоминания:</div>
+        <input type="time" id="taskReminderTime" />
+      </div>
+
+      <div class="row-flex" style="margin-top:4px;">
+        <button class="btn btn-green btn-wide" id="addTaskBtn" onclick="addTask()">+ Добавить задачу</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 id="taskListTitle">Все задачи</h3>
+      <div id="taskList"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-habits">
+    <div class="card">
+      <h2>🔥 Привычки</h2>
+      <div class="row-flex" style="margin-bottom:8px;">
+        <input type="text" id="habitInput" placeholder="Новая привычка..." />
+        <button class="btn btn-green" onclick="addHabit()" style="white-space:nowrap;padding:10px 14px;">+</button>
+      </div>
+    </div>
+    <div id="habitList"></div>
+  </div>
+
+  <div class="tab-content" id="tab-finance">
+    <div class="card">
+      <h2>💰 Финансы</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:rgba(0,255,100,0.08);border:1px solid rgba(0,255,100,0.2);border-radius:14px;padding:12px;text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);">Доходы</div>
+          <div id="totalIncome" style="font-size:20px;font-weight:700;color:#00ff64;">0 ₽</div>
+        </div>
+        <div style="background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:14px;padding:12px;text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);">Расходы</div>
+          <div id="totalExpense" style="font-size:20px;font-weight:700;color:#ff4444;">0 ₽</div>
+        </div>
+      </div>
+      <div id="finChart" class="bar-wrap"></div>
+    </div>
+    <div class="card">
+      <h3>Добавить транзакцию</h3>
+      <input type="text" id="finDesc" placeholder="Описание..." style="margin-bottom:8px;" />
+      <div class="row-flex" style="margin-bottom:8px;">
+        <input type="number" id="finAmount" placeholder="Сумма" style="flex:1;" />
+        <select id="finType">
+          <option value="income">Доход</option>
+          <option value="expense">Расход</option>
+        </select>
+      </div>
+      <button class="btn btn-green btn-wide" onclick="addTransaction()">+ Добавить</button>
+    </div>
+    <div class="card">
+      <h3>История</h3>
+      <div id="finList"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-weather">
+    <div class="card">
+      <h2>🌤 Погода</h2>
+      <div id="cityButtons" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <div id="weatherMain" style="text-align:center;padding:16px 0;">
+        <div style="font-size:60px;" id="wIcon">🌍</div>
+        <div style="font-size:36px;font-weight:700;" id="wTemp">—</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.5);" id="wDesc">Выберите город</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;" id="wDetails"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>7 дней</h3>
+      <div class="forecast-row" id="forecastRow"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-calendar">
+    <!-- Calendar -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <button onclick="calPrevMonth()" style="background:none;border:none;color:#00ff64;font-size:24px;cursor:pointer;">‹</button>
+        <div id="calMonthLabel" style="font-weight:700;font-size:17px;background:linear-gradient(135deg,#fff,#00ff64);-webkit-background-clip:text;-webkit-text-fill-color:transparent;"></div>
+        <button onclick="calNextMonth()" style="background:none;border:none;color:#00ff64;font-size:24px;cursor:pointer;">›</button>
+      </div>
+      <div class="cal-grid" style="margin-bottom:6px;" id="calDayLabels"></div>
+      <div class="cal-grid" id="calDays"></div>
+    </div>
+
+    <!-- Add task with reminder for selected day -->
+    <div class="card">
+      <h3 id="calDayTitle" style="color:#00ffff;margin-bottom:12px;">📅 Выбранный день</h3>
+
+      <input type="text" id="calTaskInput" placeholder="Название задачи..." style="margin-bottom:8px;" />
+
+      <!-- Reminder toggle for calendar -->
+      <button class="toggle-btn off" id="calReminderToggle" onclick="toggleCalReminder()" style="margin-bottom:8px;">
+        <span>📲</span><span>Telegram напоминание</span>
+        <span id="calToggleDot" style="width:7px;height:7px;border-radius:50%;background:#888;margin-left:auto;"></span>
+      </button>
+
+      <!-- Time picker panel -->
+      <div id="calReminderPanel" style="display:none;background:rgba(0,255,100,0.06);border:1px solid rgba(0,255,100,0.2);border-radius:16px;padding:14px;margin-bottom:8px;">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;">
+          ⏰ Время напоминания для <span id="calReminderDateLabel" style="color:#00ff64;font-weight:700;"></span>:
+        </div>
+        <input type="time" id="calReminderTime" />
+        <div id="calBotWarn" style="display:none;margin-top:8px;font-size:11px;color:#ff8800;text-align:center;">
+          ⚠️ Telegram-сервер недоступен. Задача сохранится, но напоминание не придёт.
+        </div>
+      </div>
+
+      <button class="btn btn-green btn-wide" id="calAddBtn" onclick="calAddTask()">+ Добавить задачу</button>
+    </div>
+
+    <!-- Task list -->
+    <div class="card">
+      <h3 id="calTaskListTitle" style="color:rgba(255,255,255,0.5);margin-bottom:10px;">Задачи</h3>
+      <div id="calTaskList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchTab('home',this)"><span class="icon">🏠</span>Главная</button>
+  <button class="nav-btn" onclick="switchTab('tasks',this)"><span class="icon">✅</span>Задачи</button>
+  <button class="nav-btn" onclick="switchTab('habits',this)"><span class="icon">🔥</span>Привычки</button>
+  <button class="nav-btn" onclick="switchTab('finance',this)"><span class="icon">💰</span>Финансы</button>
+  <button class="nav-btn" onclick="switchTab('weather',this)"><span class="icon">🌤</span>Погода</button>
+  <button class="nav-btn" onclick="switchTab('calendar',this)"><span class="icon">📅</span>Календарь</button>
+</nav>
+
+<script>
+// ===== CONFIG =====
+const BOT_SERVER = 'https://neo-bot123.onrender.com';
+const DAYS_RU = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const CITIES = [
+  {name:'Москва',lat:55.7558,lon:37.6173},
+  {name:'Киев',lat:50.4501,lon:30.5234},
+  {name:'Минск',lat:53.9006,lon:27.5590},
+  {name:'Ташкент',lat:41.2995,lon:69.2401},
+  {name:'Алматы',lat:43.2220,lon:76.8512},
+  {name:'Баку',lat:40.4093,lon:49.8671},
+  {name:'Тбилиси',lat:41.6941,lon:44.8337},
+  {name:'Астана',lat:51.1801,lon:71.4460}
+];
+
+// ===== STATE =====
+let botOnline = null;
+let tasks = JSON.parse(localStorage.getItem('nl_tasks') || '[]');
+let habits = JSON.parse(localStorage.getItem('nl_habits') || '[]');
+let transactions = JSON.parse(localStorage.getItem('nl_transactions') || '[]');
+let calDate = new Date();
+let calSelected = todayStr();
+let taskReminderOpen = false;
+let calReminderOpen = false;
+let selectedCity = 0;
+let weatherData = {};
+
+// ===== HELPERS =====
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function save() {
+  localStorage.setItem('nl_tasks', JSON.stringify(tasks));
+  localStorage.setItem('nl_habits', JSON.stringify(habits));
+  localStorage.setItem('nl_transactions', JSON.stringify(transactions));
+}
+
+// ===== TOAST =====
+let toastTimer;
+function showToast(msg, ok=true) {
+  let el = document.getElementById('toastEl');
+  if (!el) { el = document.createElement('div'); el.id = 'toastEl'; document.body.appendChild(el); }
+  el.className = `toast ${ok ? 'ok' : 'err'}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ===== STARS =====
+(function() {
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize() { c.width = innerWidth; c.height = innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  for (let i=0;i<140;i++) stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.5+0.3,a:Math.random(),v:Math.random()*0.01+0.003});
+  function draw() {
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s => {
+      s.a += s.v; if(s.a>1||s.a<0) s.v=-s.v;
+      ctx.beginPath(); ctx.arc(s.x*c.width, s.y*c.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${Math.abs(Math.sin(s.a))*.8+.1})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== BOT STATUS =====
+async function checkBot() {
+  try {
+    const r = await fetch(`${BOT_SERVER}/health`, {signal: AbortSignal.timeout(5000)});
+    const j = await r.json();
+    botOnline = j.status === 'healthy';
+  } catch { botOnline = false; }
+  const dot = document.getElementById('botDot');
+  const lbl = document.getElementById('botLabel');
+  if (botOnline) {
+    dot.className = 'bot-dot bot-online';
+    lbl.textContent = '@Kornel99_bot онлайн';
+  } else {
+    dot.className = 'bot-dot bot-offline';
+    lbl.textContent = 'Бот офлайн';
+  }
+  updateToggleDots();
+}
+checkBot();
+setInterval(checkBot, 60000);
+
+function updateToggleDots() {
+  ['taskToggleDot','calToggleDot'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = botOnline === true ? '#00ff64' : botOnline === false ? '#ff4444' : '#888';
+    if (botOnline === true) el.style.boxShadow = '0 0 5px #00ff64';
+    else el.style.boxShadow = 'none';
+  });
+}
+
+async function testBot() {
+  const r = await fetch(`${BOT_SERVER}/test`);
+  const j = await r.json();
+  showToast(j.success ? '✅ Тест-сообщение отправлено!' : '❌ Ошибка отправки', j.success);
+}
+
+async function addReminder(text, date, time) {
+  try {
+    const r = await fetch(`${BOT_SERVER}/add-reminder`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({userId:'8467166855', text, date, time})
+    });
+    return await r.json();
+  } catch (e) { return {success:false, error: e.message}; }
+}
+
+// ===== TABS =====
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name==='home') renderHomeStats();
+  if (name==='tasks') renderTaskList();
+  if (name==='habits') renderHabits();
+  if (name==='finance') renderFinance();
+  if (name==='weather' && !weatherData[CITIES[selectedCity].name]) loadWeather(selectedCity);
+  if (name==='calendar') { renderCalendar(); renderCalTaskList(); }
+}
+
+// ===== HOME STATS =====
+function renderHomeStats() {
+  const today = todayStr();
+  const todayTasks = tasks.filter(t => t.date === today);
+  const doneTasks = todayTasks.filter(t => t.done).length;
+  const activeHabits = habits.filter(h => (h.log || []).includes(today)).length;
+  const income = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+
+  document.getElementById('homeStats').innerHTML = `
+    <div style="background:rgba(0,255,100,0.08);border:1px solid rgba(0,255,100,0.2);border-radius:14px;padding:12px;text-align:center;">
+      <div style="font-size:24px;font-weight:700;color:#00ff64;">${doneTasks}/${todayTasks.length}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);">Задачи сегодня</div>
+    </div>
+    <div style="background:rgba(255,100,0,0.08);border:1px solid rgba(255,100,0,0.2);border-radius:14px;padding:12px;text-align:center;">
+      <div style="font-size:24px;font-weight:700;color:#ff6400;">${activeHabits}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);">Привычек выполнено</div>
+    </div>
+    <div style="background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.2);border-radius:14px;padding:12px;text-align:center;">
+      <div style="font-size:18px;font-weight:700;color:#00c8ff;">+${income.toLocaleString()}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);">Доходы</div>
+    </div>
+    <div style="background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:14px;padding:12px;text-align:center;">
+      <div style="font-size:18px;font-weight:700;color:#ff4444;">-${expense.toLocaleString()}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);">Расходы</div>
+    </div>
+  `;
+}
+
+// ===== TASKS TAB =====
+function toggleTaskReminder() {
+  taskReminderOpen = !taskReminderOpen;
+  const panel = document.getElementById('taskReminderPanel');
+  const btn = document.getElementById('taskReminderToggle');
+  panel.style.display = taskReminderOpen ? 'block' : 'none';
+  btn.className = `toggle-btn ${taskReminderOpen ? 'on' : 'off'}`;
+  if (!document.getElementById('taskReminderDate').value) {
+    document.getElementById('taskReminderDate').value = todayStr();
+  }
+}
+
+async function addTask() {
+  const text = document.getElementById('taskInput').value.trim();
+  if (!text) return;
+  const date = document.getElementById('taskReminderDate').value || todayStr();
+  const time = document.getElementById('taskReminderTime').value;
+  const withReminder = taskReminderOpen && time;
+
+  const task = { id: Date.now().toString(), text, done: false, date, priority: 'medium', reminder: withReminder ? time : null };
+  tasks.push(task);
+  save();
+  document.getElementById('taskInput').value = '';
+
+  const btn = document.getElementById('addTaskBtn');
+  if (withReminder) {
+    btn.textContent = '⏳ Отправка...';
+    btn.disabled = true;
+    const res = await addReminder(text, date, time);
+    btn.textContent = '+ Добавить задачу';
+    btn.disabled = false;
+    showToast(res.success ? `✅ Напоминание: ${date} в ${time}` : `⚠️ Задача сохранена, бот: ${res.error || 'ошибка'}`, res.success);
+  }
+
+  taskReminderOpen = false;
+  document.getElementById('taskReminderPanel').style.display = 'none';
+  document.getElementById('taskReminderToggle').className = 'toggle-btn off';
+  renderTaskList();
+}
+
+function renderTaskList() {
+  const list = document.getElementById('taskList');
+  const today = todayStr();
+  if (tasks.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.25);padding:20px 0;font-size:13px;">🌌 Нет задач</div>';
+    document.getElementById('taskListTitle').textContent = 'Все задачи';
+    return;
+  }
+  const sorted = [...tasks].sort((a,b) => a.date < b.date ? -1 : 1);
+  document.getElementById('taskListTitle').textContent = `Все задачи (${tasks.filter(t=>!t.done).length} активных)`;
+  list.innerHTML = sorted.map(t => `
+    <div class="task-row">
+      <input type="checkbox" class="task-check" ${t.done?'checked':''} onchange="toggleTask('${t.id}')" />
+      <div style="flex:1;">
+        <div class="task-text ${t.done?'done':''}">${t.text}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);">${t.date === today ? '📌 Сегодня' : t.date}</div>
+        ${t.reminder ? `<div class="task-reminder-badge">📲 ${t.reminder}</div>` : ''}
+      </div>
+      <button class="btn-danger" onclick="deleteTask('${t.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function toggleTask(id) {
+  tasks = tasks.map(t => t.id===id ? {...t, done: !t.done} : t);
+  save(); renderTaskList();
+}
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id!==id);
+  save(); renderTaskList();
+}
+
+// ===== HABITS =====
+function addHabit() {
+  const text = document.getElementById('habitInput').value.trim();
+  if (!text) return;
+  habits.push({ id: Date.now().toString(), name: text, color: '#00ff64', log: [], icon: '⭐' });
+  document.getElementById('habitInput').value = '';
+  save(); renderHabits();
+}
+
+function renderHabits() {
+  const list = document.getElementById('habitList');
+  if (habits.length === 0) {
+    list.innerHTML = '<div class="card" style="text-align:center;color:rgba(255,255,255,0.25);font-size:13px;">🌌 Нет привычек</div>';
+    return;
+  }
+  const today = todayStr();
+  list.innerHTML = habits.map(h => {
+    const last14 = Array.from({length:14},(_,i)=>{
+      const d=new Date(); d.setDate(d.getDate()-13+i);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    });
+    const streak = calcStreak(h.log||[], today);
+    const circles = last14.map(ds => {
+      const done = (h.log||[]).includes(ds);
+      return `<button class="h-circle ${done?'done':''}" style="--hc:${h.color};" onclick="toggleHabit('${h.id}','${ds}')">${done?'✓':''}</button>`;
+    }).join('');
+    const todayDone = (h.log||[]).includes(today);
+    return `
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:20px;">${h.icon}</span>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#fff;">${h.name}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);">🔥 Серия: ${streak} дн.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="toggleHabit('${h.id}','${today}')" style="padding:6px 12px;border-radius:50px;border:none;background:${todayDone?'rgba(0,255,100,0.15)':'rgba(255,255,255,0.06)'};border:1px solid ${todayDone?'rgba(0,255,100,0.4)':'rgba(255,255,255,0.1)'};color:${todayDone?'#00ff64':'rgba(255,255,255,0.5)'};cursor:pointer;font-size:12px;font-weight:600;">
+              ${todayDone?'✓ Готово':'Отметить'}
+            </button>
+            <button class="btn-danger" onclick="deleteHabit('${h.id}')">×</button>
+          </div>
+        </div>
+        <div class="habit-circles">${circles}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function calcStreak(log, today) {
+  let streak=0, d=new Date(today);
+  while(true) {
+    const s=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(log.includes(s)) { streak++; d.setDate(d.getDate()-1); } else break;
+    if(streak>365) break;
+  }
+  return streak;
+}
+
+function toggleHabit(id, date) {
+  habits = habits.map(h => {
+    if (h.id!==id) return h;
+    const log = h.log || [];
+    return {...h, log: log.includes(date) ? log.filter(d=>d!==date) : [...log, date]};
+  });
+  save(); renderHabits();
+}
+function deleteHabit(id) {
+  habits = habits.filter(h=>h.id!==id);
+  save(); renderHabits();
+}
+
+// ===== FINANCE =====
+function addTransaction() {
+  const desc = document.getElementById('finDesc').value.trim();
+  const amount = parseFloat(document.getElementById('finAmount').value);
+  const type = document.getElementById('finType').value;
+  if (!desc || !amount || amount<=0) return;
+  transactions.push({ id: Date.now().toString(), desc, amount, type, date: todayStr() });
+  document.getElementById('finDesc').value = '';
+  document.getElementById('finAmount').value = '';
+  save(); renderFinance();
+}
+
+function renderFinance() {
+  const income = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('totalIncome').textContent = `+${income.toLocaleString('ru')} ₽`;
+  document.getElementById('totalExpense').textContent = `-${expense.toLocaleString('ru')} ₽`;
+
+  // Bar chart (last 7 days)
+  const chart = document.getElementById('finChart');
+  const days = Array.from({length:7},(_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-6+i);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+  const maxVal = Math.max(...days.map(ds => {
+    const inc = transactions.filter(t=>t.type==='income'&&t.date===ds).reduce((s,t)=>s+t.amount,0);
+    const exp = transactions.filter(t=>t.type==='expense'&&t.date===ds).reduce((s,t)=>s+t.amount,0);
+    return Math.max(inc, exp);
+  }), 1);
+  chart.innerHTML = days.map(ds => {
+    const inc = transactions.filter(t=>t.type==='income'&&t.date===ds).reduce((s,t)=>s+t.amount,0);
+    const exp = transactions.filter(t=>t.type==='expense'&&t.date===ds).reduce((s,t)=>s+t.amount,0);
+    const d = new Date(ds);
+    return `
+      <div class="bar-item">
+        <div style="display:flex;gap:2px;align-items:flex-end;height:80px;">
+          <div class="bar inc" style="height:${(inc/maxVal*80)}px;width:10px;"></div>
+          <div class="bar exp" style="height:${(exp/maxVal*80)}px;width:10px;"></div>
+        </div>
+        <div class="bar-label">${DAYS_RU[d.getDay()]}</div>
+      </div>
+    `;
+  }).join('');
+
+  // History
+  const hist = document.getElementById('finList');
+  const sorted = [...transactions].sort((a,b)=>b.date<a.date?-1:1);
+  hist.innerHTML = sorted.length===0
+    ? '<div style="text-align:center;color:rgba(255,255,255,0.25);padding:16px;font-size:13px;">Нет транзакций</div>'
+    : sorted.map(t => `
+      <div class="info-row">
+        <span>${t.desc} <span style="font-size:11px;color:rgba(255,255,255,0.3);">${t.date}</span></span>
+        <span class="${t.type==='income'?'green':'red'}">${t.type==='income'?'+':'-'}${t.amount.toLocaleString('ru')} ₽
+          <button onclick="deleteTransaction('${t.id}')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;margin-left:4px;font-size:14px;">×</button>
+        </span>
+      </div>
+    `).join('');
+}
+function deleteTransaction(id) {
+  transactions = transactions.filter(t=>t.id!==id);
+  save(); renderFinance();
+}
+
+// ===== WEATHER =====
+const WMO = {0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'❄️',73:'❄️',75:'❄️',80:'🌧',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
+const WD = {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Пасмурно',45:'Туман',51:'Лёгкий дождь',53:'Дождь',61:'Небольшой дождь',63:'Умеренный дождь',65:'Сильный дождь',71:'Небольшой снег',80:'Ливень',95:'Гроза'};
+
+function initCityButtons() {
+  document.getElementById('cityButtons').innerHTML = CITIES.map((c,i) =>
+    `<button class="city-btn ${i===selectedCity?'active':''}" onclick="selectCity(${i})">${c.name}</button>`
+  ).join('');
+}
+
+function selectCity(i) {
+  selectedCity = i;
+  initCityButtons();
+  if (weatherData[CITIES[i].name]) displayWeather(CITIES[i].name);
+  else loadWeather(i);
+}
+
+async function loadWeather(i) {
+  const city = CITIES[i];
+  document.getElementById('wIcon').textContent = '⏳';
+  document.getElementById('wTemp').textContent = '...';
+  document.getElementById('wDesc').textContent = 'Загрузка...';
+  document.getElementById('forecastRow').innerHTML = '';
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,windspeed_10m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=7`);
+    const d = await r.json();
+    weatherData[city.name] = d;
+    displayWeather(city.name);
+  } catch { document.getElementById('wDesc').textContent = 'Ошибка загрузки'; }
+}
+
+function displayWeather(name) {
+  const d = weatherData[name];
+  if (!d) return;
+  const c = d.current;
+  const code = c.weathercode;
+  document.getElementById('wIcon').textContent = WMO[code] || '🌍';
+  document.getElementById('wTemp').textContent = `${Math.round(c.temperature_2m)}°C`;
+  document.getElementById('wDesc').textContent = `${CITIES.find(x=>x.name===name)?.name} · ${WD[code] || 'Облачно'}`;
+  document.getElementById('wDetails').innerHTML = `
+    <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px;text-align:center;">
+      <div style="font-size:18px;">💨</div>
+      <div style="font-size:13px;font-weight:700;">${Math.round(c.windspeed_10m)} км/ч</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);">Ветер</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px;text-align:center;">
+      <div style="font-size:18px;">💧</div>
+      <div style="font-size:13px;font-weight:700;">${c.relativehumidity_2m}%</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);">Влажность</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px;text-align:center;">
+      <div style="font-size:18px;">🌡</div>
+      <div style="font-size:13px;font-weight:700;">${Math.round(d.daily.temperature_2m_max[0])}°/${Math.round(d.daily.temperature_2m_min[0])}°</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);">Мин/Макс</div>
+    </div>
+  `;
+  const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  document.getElementById('forecastRow').innerHTML = d.daily.time.map((ds,i) => {
+    const day = new Date(ds);
+    return `
+      <div class="f-card">
+        <div class="f-day">${i===0?'Сег':days[day.getDay()]}</div>
+        <div class="f-icon">${WMO[d.daily.weathercode[i]]||'🌍'}</div>
+        <div class="f-temp">${Math.round(d.daily.temperature_2m_max[i])}°</div>
+        <div class="f-prec">${d.daily.precipitation_sum[i]>0?`💧${d.daily.precipitation_sum[i]}мм`:''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== CALENDAR =====
+function renderCalendar() {
+  const y = calDate.getFullYear(), m = calDate.getMonth();
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const today = todayStr();
+
+  document.getElementById('calMonthLabel').textContent = `${MONTHS_RU[m]} ${y}`;
+  document.getElementById('calReminderDateLabel').textContent = calSelected;
+
+  // Day labels
+  document.getElementById('calDayLabels').innerHTML = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб']
+    .map(d=>`<div class="cal-day-label">${d}</div>`).join('');
+
+  // Days grid
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  let html = Array(offset).fill('<div></div>').join('');
+  for (let i=1;i<=daysInMonth;i++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    const hasTask = tasks.some(t=>t.date===ds);
+    const hasReminder = tasks.some(t=>t.date===ds && t.reminder);
+    const isToday = ds===today;
+    const isSel = ds===calSelected;
+    html += `<button class="cal-day ${isToday?'today':''} ${isSel?'selected':''} ${hasTask?'has-task':''}" onclick="calSelectDay('${ds}')">
+      ${i}
+      ${hasReminder ? '<span class="cal-bell">📲</span>' : (hasTask && !isSel ? '<span class="cal-dot"></span>' : '')}
+    </button>`;
+  }
+  document.getElementById('calDays').innerHTML = html;
+  document.getElementById('calDayTitle').textContent = `📅 ${calSelected === today ? 'Сегодня' : calSelected}`;
+
+  // Update reminder panel label
+  document.getElementById('calReminderDateLabel').textContent = calSelected;
+
+  renderCalTaskList();
+  updateCalBotWarn();
+}
+
+function calSelectDay(ds) { calSelected = ds; renderCalendar(); }
+function calPrevMonth() { calDate = new Date(calDate.getFullYear(), calDate.getMonth()-1, 1); renderCalendar(); }
+function calNextMonth() { calDate = new Date(calDate.getFullYear(), calDate.getMonth()+1, 1); renderCalendar(); }
+
+function toggleCalReminder() {
+  calReminderOpen = !calReminderOpen;
+  document.getElementById('calReminderPanel').style.display = calReminderOpen ? 'block' : 'none';
+  document.getElementById('calReminderToggle').className = `toggle-btn ${calReminderOpen ? 'on' : 'off'}`;
+  updateCalBotWarn();
+  updateAddBtn();
+}
+
+function updateCalBotWarn() {
+  document.getElementById('calBotWarn').style.display = calReminderOpen && botOnline===false ? 'block' : 'none';
+}
+
+function updateAddBtn() {
+  const time = document.getElementById('calReminderTime').value;
+  const btn = document.getElementById('calAddBtn');
+  btn.textContent = calReminderOpen && time ? `📲 Добавить + напомнить в ${time}` : '+ Добавить задачу';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('calReminderTime').addEventListener('input', updateAddBtn);
+});
+
+async function calAddTask() {
+  const text = document.getElementById('calTaskInput').value.trim();
+  if (!text) { showToast('⚠️ Введи название задачи', false); return; }
+  const time = document.getElementById('calReminderTime').value;
+  const withReminder = calReminderOpen && time;
+
+  const task = { id: Date.now().toString(), text, done: false, date: calSelected, priority: 'medium', reminder: withReminder ? time : null };
+  tasks.push(task);
+  save();
+  document.getElementById('calTaskInput').value = '';
+
+  if (withReminder) {
+    document.getElementById('calAddBtn').textContent = '⏳ Отправка на сервер...';
+    document.getElementById('calAddBtn').disabled = true;
+    const res = await addReminder(text, calSelected, time);
+    document.getElementById('calAddBtn').disabled = false;
+    showToast(
+      res.success ? `✅ Напоминание: ${calSelected} в ${time}` : `⚠️ Задача сохранена, бот: ${res.error || 'ошибка'}`,
+      res.success
+    );
+  }
+
+  calReminderOpen = false;
+  document.getElementById('calReminderPanel').style.display = 'none';
+  document.getElementById('calReminderToggle').className = 'toggle-btn off';
+  document.getElementById('calReminderTime').value = '';
+  updateAddBtn();
+  renderCalendar();
+}
+
+function renderCalTaskList() {
+  const list = document.getElementById('calTaskList');
+  const selTasks = tasks.filter(t => t.date === calSelected);
+  document.getElementById('calTaskListTitle').textContent = selTasks.length === 0 ? 'Нет задач' : `${selTasks.length} задач${selTasks.length===1?'а':selTasks.length<5?'и':''}`;
+
+  if (selTasks.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.25);padding:20px 0;font-size:13px;">🌌 Нет задач на этот день</div>';
+    return;
+  }
+
+  list.innerHTML = selTasks.map(t => `
+    <div class="task-row" id="row-${t.id}">
+      <input type="checkbox" class="task-check" ${t.done?'checked':''} onchange="calToggleTask('${t.id}')" />
+      <div style="flex:1;">
+        <div class="task-text ${t.done?'done':''}">${t.text}</div>
+        ${t.reminder ? `<div class="task-reminder-badge">📲 Напоминание: ${t.reminder}</div>` : ''}
+      </div>
+      <button class="btn-icon ${t.reminder?'active':''}" title="Установить напоминание" onclick="calOpenReminderFor('${t.id}')">📲</button>
+      <button class="btn-danger" onclick="calDeleteTask('${t.id}')">×</button>
+    </div>
+    <div id="inline-panel-${t.id}" style="display:none;margin-bottom:12px;" class="reminder-panel">
+      <div class="reminder-panel-label">⏰ Время напоминания для: <b style="color:#fff;">${t.text}</b></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="time" id="inline-time-${t.id}" value="${t.reminder||''}" style="flex:1;font-size:18px;" />
+        <button onclick="calSendReminderFor('${t.id}')"
+          style="padding:8px 14px;border-radius:50px;border:none;background:linear-gradient(135deg,#00ff64,#00cc50);color:#070b14;font-weight:700;font-size:13px;cursor:pointer;">
+          Отправить
+        </button>
+      </div>
+      ${botOnline===false ? '<div style="font-size:11px;color:#ff8800;margin-top:6px;">Сервер недоступен. Попробуй позже.</div>' : ''}
+    </div>
+  `).join('');
+}
+
+function calOpenReminderFor(id) {
+  const panel = document.getElementById(`inline-panel-${id}`);
+  const isOpen = panel.style.display !== 'none';
+  // Close all first
+  document.querySelectorAll('[id^="inline-panel-"]').forEach(p => p.style.display = 'none');
+  if (!isOpen) panel.style.display = 'block';
+}
+
+async function calSendReminderFor(id) {
+  const task = tasks.find(t=>t.id===id);
+  if (!task) return;
+  const time = document.getElementById(`inline-time-${id}`).value;
+  if (!time) { showToast('⚠️ Выбери время', false); return; }
+
+  const res = await addReminder(task.text, task.date, time);
+  if (res.success) {
+    tasks = tasks.map(t => t.id===id ? {...t, reminder: time} : t);
+    save();
+    showToast(`✅ Напоминание: ${task.date} в ${time}`, true);
+  } else {
+    showToast(`❌ Ошибка: ${res.error || 'сервер недоступен'}`, false);
+  }
+  renderCalendar();
+}
+
+function calToggleTask(id) {
+  tasks = tasks.map(t => t.id===id ? {...t, done: !t.done} : t);
+  save(); renderCalTaskList();
+}
+function calDeleteTask(id) {
+  tasks = tasks.filter(t=>t.id!==id);
+  save(); renderCalendar();
+}
+
+// ===== INIT =====
+function init() {
+  initCityButtons();
+  renderHomeStats();
+  // Set default date inputs
+  document.getElementById('taskReminderDate').value = todayStr();
+  updateToggleDots();
+}
+
+init();
+</script>
+</body>
+</html>
